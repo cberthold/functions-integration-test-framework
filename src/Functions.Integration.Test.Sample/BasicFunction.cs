@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
-namespace Functions.Integration.Test.Framework
+namespace Functions.Integration.Test.Sample
 {
     public static class BasicFunction
     {
