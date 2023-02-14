@@ -1,6 +1,10 @@
 using Functions.Integration.Test.Framework.Builders;
+using Grpc.Core;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Azure.WebJobs.Script;
+using Microsoft.Azure.WebJobs.Script.Workers;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -17,7 +21,7 @@ public class TestFunctionHostBuilderTest
         var id = Guid.Empty;
 
         // apply
-        using(var host = builder.Build())
+        using (var host = builder.Build())
         {
             var services = host.Services;
             var resolver = services.GetRequiredService<TestStartup.TestResolver>();
@@ -26,6 +30,45 @@ public class TestFunctionHostBuilderTest
 
         // assert
         Assert.Equal(TestStartup.Id, id);
+    }
+
+    [Fact]
+    public async Task ShouldRunBasicFunction()
+    {
+        // arrange
+        const string EXPECTED = "Hello, test. This HTTP triggered function executed successfully.";
+        string path = Path.GetDirectoryName(Path.GetFullPath(typeof(TestStartup).Assembly.Location));
+        string workersPath = Path.Combine(path, WorkerConstants.DefaultWorkersDirectoryName);
+        if (!Directory.Exists(workersPath))
+        {
+            Directory.CreateDirectory(workersPath);
+        }
+
+        var builder = TestFunctionHostBuilder.Create();
+        builder.WebHostBuilder.ConfigureServices(a =>
+        {
+            a.PostConfigure<ScriptApplicationHostOptions>(o =>
+            {
+                string scriptPath = Path.GetFullPath(Path.Combine(path, "..", "..", "..", "..", "..", @"src\Functions.Integration.Test.Sample\bin\Debug\net6.0\"));
+                o.ScriptPath = scriptPath;
+                o.LogPath = Path.Combine(Path.GetTempPath(), @"Functions");
+                o.SecretsPath = Path.Combine(Path.GetTempPath(), @"FunctionsTests\Secrets");
+            });
+        });
+
+        // apply
+        var server = new TestServer(builder.WebHostBuilder);
+        server.BaseAddress = new Uri("http://function-app/");
+
+        var manager = server.Host.Services.GetService<IScriptHostManager>();
+        await manager.DelayUntilHostReady();
+
+        var client = server.CreateClient();
+
+        // assert
+        var response = await client.GetAsync("api/BasicFunction?name=test");
+        var str = await response.Content.ReadAsStringAsync();
+        Assert.Equal(EXPECTED, str);
     }
 
 

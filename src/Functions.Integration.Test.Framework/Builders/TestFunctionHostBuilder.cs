@@ -11,7 +11,7 @@ namespace Functions.Integration.Test.Framework.Builders
 {
     public class TestFunctionHostBuilder
     {
-        private IWebHostBuilder webHostBuilder;
+        public IWebHostBuilder? WebHostBuilder { get; private set; }
 
         public static TestFunctionHostBuilder Create()
         {
@@ -26,13 +26,13 @@ namespace Functions.Integration.Test.Framework.Builders
             var webHostBuilder = WebHost.CreateDefaultBuilder(Array.Empty<string>())
                 .UseStartup<TStartup>();
 
-            builder.webHostBuilder = webHostBuilder;
+            builder.WebHostBuilder = webHostBuilder;
             return builder;
         }
 
         public IWebHost Build()
         {
-            return webHostBuilder.Build();
+            return WebHostBuilder.Build();
         }
     }
 }
