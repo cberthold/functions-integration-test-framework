@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "Functions_Integration_Test_Framework": {
+      "commandName": "Project",
+      "commandLineArgs": "--port 7229",
+      "launchBrowser": false
+    }
+  }
+}
