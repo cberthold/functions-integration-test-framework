@@ -17,7 +17,7 @@ public class TestFunctionHostBuilderTest
     public void ShouldBuildUsingPassedInType()
     {
         // arrange
-        var builder = TestFunctionHostBuilder.Create<TestStartup>();
+        var builder = TestFunctionHostBuilder.Create();
         var id = Guid.Empty;
 
         // apply
@@ -44,18 +44,10 @@ public class TestFunctionHostBuilderTest
             Directory.CreateDirectory(workersPath);
         }
 
-        var builder = TestFunctionHostBuilder.Create();
-        builder.WebHostBuilder.ConfigureServices(a =>
-        {
-            a.PostConfigure<ScriptApplicationHostOptions>(o =>
-            {
-                string scriptPath = Path.GetFullPath(Path.Combine(path, "..", "..", "..", "..", "..", @"src\Functions.Integration.Test.Sample\bin\Debug\net6.0\"));
-                o.ScriptPath = scriptPath;
-                o.LogPath = Path.Combine(Path.GetTempPath(), @"Functions");
-                o.SecretsPath = Path.Combine(Path.GetTempPath(), @"FunctionsTests\Secrets");
-            });
-        });
+        string scriptPath = Path.GetFullPath(Path.Combine(path, "..", "..", "..", "..", "..", @"src\Functions.Integration.Test.Sample\bin\Debug\net6.0\"));
 
+        var builder = TestFunctionHostBuilder.Create(scriptPath: scriptPath);
+        
         // apply
         var server = new TestServer(builder.WebHostBuilder);
         server.BaseAddress = new Uri("http://function-app/");

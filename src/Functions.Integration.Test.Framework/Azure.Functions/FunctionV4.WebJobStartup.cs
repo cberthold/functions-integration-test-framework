@@ -5,41 +5,59 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Azure.WebJobs.Script;
 using Microsoft.Azure.WebJobs.Script.WebHost;
-using Microsoft.Extensions.Configuration;
+using Microsoft.Azure.WebJobs.Script.WebHost.Authentication;
+using Microsoft.Azure.WebJobs.Script.WebHost.Controllers;
+using Microsoft.Azure.WebJobs.Script.WebHost.DependencyInjection;
+using Microsoft.Azure.WebJobs.Script.WebHost.Security.Authentication;
+using Microsoft.Azure.WebJobs.Script.WebHost.Security;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 
 namespace Functions.Integration.Test.Framework.Azure.Functions
 {
     namespace FunctionV4
     {
-        public class WebJobStartup
+        public class WebJobStartup : IStartup
         {
-            public WebJobStartup(IConfiguration configuration)
+            private readonly WebHostBuilderContext builderContext;
+            private readonly ScriptApplicationHostOptions hostOptions;
+
+            public WebJobStartup(
+                WebHostBuilderContext builderContext,
+                ScriptApplicationHostOptions hostOptions)
             {
-                Configuration = configuration;
+                this.builderContext = builderContext;
+                this.hostOptions = hostOptions;
             }
 
-            public IConfiguration Configuration { get; }
-
-            // This method gets called by the runtime. Use this method to add services to the container.
-            public void ConfigureServices(IServiceCollection services)
+            public void Configure(IApplicationBuilder app)
             {
-                services.AddWebJobsScriptHostAuthentication();
-                services.AddWebJobsScriptHostAuthorization();
-                services.AddWebJobsScriptHost(Configuration);
-            }
-
-            // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-            public void Configure(IApplicationBuilder app, IApplicationLifetime applicationLifetime, IHostingEnvironment env, ILoggerFactory loggerFactory)
-            {
-                if (env.IsDevelopment())
-                {
-                    app.UseDeveloperExceptionPage();
-                }
-
+                var applicationLifetime = app.ApplicationServices.GetRequiredService<IApplicationLifetime>();
                 app.UseWebJobsScriptHost(applicationLifetime);
+            }
+
+            public IServiceProvider ConfigureServices(IServiceCollection services)
+            {
+                services.AddAuthentication()
+                        .AddScriptJwtBearer()
+                        .AddScheme<AuthenticationLevelOptions, AlwaysAdminAuthHandler<AuthenticationLevelOptions>>(AuthLevelAuthenticationDefaults.AuthenticationScheme, configureOptions: _ => { })
+                        .AddScheme<ArmAuthenticationOptions, AlwaysAdminAuthHandler<ArmAuthenticationOptions>>(ArmAuthenticationDefaults.AuthenticationScheme, _ => { });
+
+                services.AddWebJobsScriptHostAuthorization();
+                services.AddMvc().AddApplicationPart(typeof(HostController).Assembly);
+
+                services.AddWebJobsScriptHost(builderContext.Configuration);
+
+                services.Configure<ScriptApplicationHostOptions>(o =>
+                {
+                    o.ScriptPath = hostOptions.ScriptPath;
+                    o.LogPath = hostOptions.LogPath;
+                    o.IsSelfHost = hostOptions.IsSelfHost;
+                    o.SecretsPath = hostOptions.SecretsPath;
+                });
+
+                return services.BuildServiceProvider();
             }
         }
     }
