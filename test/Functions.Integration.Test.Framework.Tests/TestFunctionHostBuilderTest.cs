@@ -1,23 +1,41 @@
+using System.Diagnostics;
+using System.Net;
+using Autofac.Core;
 using Functions.Integration.Test.Framework.Builders;
+using Functions.Integration.Test.Framework.Extensions;
+using Functions.Integration.Test.Framework.Loggers;
 using Grpc.Core;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Script;
+using Microsoft.Azure.WebJobs.Script.WebHost;
 using Microsoft.Azure.WebJobs.Script.Workers;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Xunit.Abstractions;
 
 namespace Functions.Integration.Test.Framework.Tests;
 
 public class TestFunctionHostBuilderTest
 {
+    private readonly ITestOutputHelper outputHelper;
+
+    public TestFunctionHostBuilderTest(ITestOutputHelper outputHelper)
+    {
+        this.outputHelper = outputHelper;
+    }
+
+
     [Fact]
     public void ShouldBuildUsingPassedInType()
     {
         // arrange
         var builder = TestFunctionHostBuilder.Create();
+        builder.WebHostBuilder.UseStartup<TestStartup>();
+
         var id = Guid.Empty;
 
         // apply
@@ -47,22 +65,31 @@ public class TestFunctionHostBuilderTest
         string scriptPath = Path.GetFullPath(Path.Combine(path, "..", "..", "..", "..", "..", @"src\Functions.Integration.Test.Sample\bin\Debug\net6.0\"));
 
         var builder = TestFunctionHostBuilder.Create(scriptPath: scriptPath);
-        
+        builder.WebHostBuilder.ConfigureLogging(l =>
+        {
+            l.AddProvider(new TestOutputLoggerProvider(outputHelper));
+        });
+
         // apply
         var server = new TestServer(builder.WebHostBuilder);
-        server.BaseAddress = new Uri("http://function-app/");
+        server.BaseAddress = new Uri("http://localhost/");
 
         var manager = server.Host.Services.GetService<IScriptHostManager>();
         await manager.DelayUntilHostReady();
 
         var client = server.CreateClient();
 
+        await TaskBuilder
+            .While(() => client.IsHostRunningAsync())
+            .Poll()
+            .UntilTimeout()
+            .Go();
+
         // assert
         var response = await client.GetAsync("api/BasicFunction?name=test");
         var str = await response.Content.ReadAsStringAsync();
         Assert.Equal(EXPECTED, str);
     }
-
 
     public class TestStartup
     {
