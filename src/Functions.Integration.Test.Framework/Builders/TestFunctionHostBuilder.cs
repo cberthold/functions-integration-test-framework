@@ -12,12 +12,16 @@ using Microsoft.Azure.WebJobs.Script.WebHost;
 using static Microsoft.Azure.WebJobs.Script.EnvironmentSettingNames;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Azure.WebJobs.Script;
+using Functions.Integration.Test.Framework.Extensions;
+using Microsoft.Azure.WebJobs;
 
 namespace Functions.Integration.Test.Framework.Builders
 {
     public class TestFunctionHostBuilder
     {
         public IWebHostBuilder? WebHostBuilder { get; private set; }
+
+        public static string HostId { get; } = Guid.NewGuid().ToString("N");
 
         public static TestFunctionHostBuilder Create(int port = 7071, string scriptPath = null)
         {
@@ -52,9 +56,13 @@ namespace Functions.Integration.Test.Framework.Builders
                  .ConfigureServices((context, services) =>
                  {
                      services.AddSingleton<IStartup>(new WebJobStartup(context, hostOptions));
+                 })
+                 .ConfigureWebJobsBuilder(svc =>
+                 {
+                     svc.UseHostId(HostId);
                  });
 
-                     builder.WebHostBuilder = webHostBuilder;
+            builder.WebHostBuilder = webHostBuilder;
             return builder;
         }
 
@@ -82,6 +90,10 @@ namespace Functions.Integration.Test.Framework.Builders
             {
                 { AzureWebsiteHostName, listenUri.Authority },
                 { EnvironmentNameKey , "Development" },
+                //{ AzureWebsiteSlotName, string.Empty },
+                { AzureWebJobsSecretStorage, "UseDevelopmentStorage=true" },
+                { "Storage", "UseDevelopmentStorage=true" },
+                { AzureWebJobsSecretStorageType, "Files" },
                 { AzureWebsiteInstanceId, Guid.NewGuid().ToString("N") },
                 { AzureWebJobsScriptRoot, scriptPath },
                 { AzureWebsiteHomePath, scriptPath },
