@@ -15,6 +15,7 @@ using Microsoft.Azure.WebJobs.Script.Workers;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json.Linq;
 using Xunit.Abstractions;
 
 namespace Functions.Integration.Test.Framework.Tests;
@@ -90,6 +91,74 @@ public class TestFunctionHostBuilderTest
         var str = await response.Content.ReadAsStringAsync();
         Assert.Equal(EXPECTED, str);
     }
+
+
+    [Fact]
+    public async Task ShouldRunOrchestrationFunction()
+    {
+        // arrange
+        string path = Path.GetDirectoryName(Path.GetFullPath(typeof(TestStartup).Assembly.Location));
+        string workersPath = Path.Combine(path, WorkerConstants.DefaultWorkersDirectoryName);
+        if (!Directory.Exists(workersPath))
+        {
+            Directory.CreateDirectory(workersPath);
+        }
+
+        string scriptPath = Path.GetFullPath(Path.Combine(path, "..", "..", "..", "..", "..", @"src\Functions.Integration.Test.Sample\bin\Debug\net6.0\"));
+
+        var builder = TestFunctionHostBuilder.Create(scriptPath: scriptPath);
+        builder.WebHostBuilder.ConfigureLogging(l =>
+        {
+            l.AddProvider(new TestOutputLoggerProvider(outputHelper));
+        });
+
+        // apply
+        var server = new TestServer(builder.WebHostBuilder);
+        server.BaseAddress = new Uri("http://localhost/");
+
+        var manager = server.Host.Services.GetService<IScriptHostManager>();
+        await manager.DelayUntilHostReady();
+
+        var client = server.CreateClient();
+
+        await TaskBuilder
+            .While(() => client.IsHostRunningAsync())
+            .Poll()
+            .UntilTimeout()
+            .Go();
+
+
+        var response = await client.GetAsync("api/OrchestrationFunction_HttpStart");
+
+        string responseUrl = response.Headers.Location.ToString();
+
+        await TaskBuilder
+            .While(async () =>
+            {
+                response = await client.GetAsync(responseUrl);
+                var isAccepted = (response.StatusCode == HttpStatusCode.Accepted);
+                return !isAccepted;
+            })
+            .Poll()
+            .UntilTimeout()
+            .Go();
+
+        // assert
+        dynamic responseObj = await response.Content.ReadAsAsync<dynamic>();
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        JArray output = (JArray)responseObj.output;
+        var list = output.ToObject<string[]>();
+
+        Assert.Equal(new string[]
+        {
+            "Hello Tokyo!", 
+            "Hello Seattle!",
+            "Hello London!",
+        }, list);
+
+    }
+
+
 
     public class TestStartup
     {
