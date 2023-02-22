@@ -19,6 +19,13 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+    - name: Setup Node.js environment
+      uses: actions/setup-node@v2.5.1
+    - name: Install & run Azurite
+      run: npm install -g azurite
+    - name: Run Azurite in Background
+      shell: bash
+      run: azurite --location /tmp &
     - name: Setup dotnet ${{ matrix.dotnet-version }}
       uses: actions/setup-dotnet@v3
       with:
