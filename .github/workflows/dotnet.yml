@@ -30,9 +30,12 @@ jobs:
       uses: actions/setup-dotnet@v3
       with:
         dotnet-version: ${{ matrix.dotnet-version }}
-      # You can test your matrix by printing the current dotnet version
     - name: Display dotnet version
       run: dotnet --version
+    # copy local.settings.json
+    - name: Copy local.settings.json
+      shell: bash
+      run: cp src/Functions.Integration.Test.Sample/default.local.settings.json src/Functions.Integration.Test.Sample/local.settings.json 
     - name: Restore dependencies
       run: dotnet restore
     - name: Build
