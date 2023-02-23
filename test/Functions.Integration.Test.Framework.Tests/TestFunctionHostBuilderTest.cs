@@ -63,7 +63,7 @@ public class TestFunctionHostBuilderTest
             Directory.CreateDirectory(workersPath);
         }
 
-        string scriptPath = Path.GetFullPath(Path.Combine(path, "..", "..", "..", "..", "..", @"src\Functions.Integration.Test.Sample\bin\Debug\net6.0\"));
+        string scriptPath = Path.GetFullPath(Path.Combine(path, "..", "..", "..", "..", "..", "src", "Functions.Integration.Test.Sample", "bin", "Debug", "net6.0"));
 
         var builder = TestFunctionHostBuilder.Create(scriptPath: scriptPath);
         builder.WebHostBuilder.ConfigureLogging(l =>
