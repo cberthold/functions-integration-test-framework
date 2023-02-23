@@ -38,7 +38,7 @@ jobs:
       run: dotnet build --no-restore framework.sln
     - name: List files in the repository
       run: |
-        ls ${{ github.workspace }}
+        ls -R ${{ github.workspace }}
     - name: Test with dotnet
       run: dotnet test --no-build --logger trx --results-directory "TestResults-${{ matrix.dotnet-version }}"
     - name: Upload dotnet test results
