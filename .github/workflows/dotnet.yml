@@ -32,14 +32,13 @@ jobs:
         dotnet-version: ${{ matrix.dotnet-version }}
     - name: Display dotnet version
       run: dotnet --version
-    # copy local.settings.json
-    - name: Copy local.settings.json
-      shell: bash
-      run: cp src/Functions.Integration.Test.Sample/default.local.settings.json src/Functions.Integration.Test.Sample/local.settings.json 
     - name: Restore dependencies
-      run: dotnet restore
+      run: dotnet restore framework.sln
     - name: Build
-      run: dotnet build --no-restore
+      run: dotnet build --no-restore framework.sln
+    - name: List files in the repository
+      run: |
+        ls ${{ github.workspace }}
     - name: Test with dotnet
       run: dotnet test --no-build --logger trx --results-directory "TestResults-${{ matrix.dotnet-version }}"
     - name: Upload dotnet test results
