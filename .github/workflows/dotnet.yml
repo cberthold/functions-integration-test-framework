@@ -39,6 +39,9 @@ jobs:
     - name: Copy local settings to sample build output
       run: |
         cp src/Functions.Integration.Test.Sample/local.settings.json src/Functions.Integration.Test.Sample/bin/Debug/net6.0
+    - name: List files in the repository
+      run: |
+        ls -R ${{ github.workspace }}
     - name: Test with dotnet
       run: dotnet test --no-build --logger trx --results-directory "TestResults-${{ matrix.dotnet-version }}"
     - name: Upload dotnet test results
