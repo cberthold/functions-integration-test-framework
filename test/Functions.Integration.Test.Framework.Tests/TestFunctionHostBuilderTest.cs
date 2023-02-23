@@ -63,6 +63,8 @@ public class TestFunctionHostBuilderTest
             Directory.CreateDirectory(workersPath);
         }
 
+
+
         string scriptPath = Path.GetFullPath(Path.Combine(path, "..", "..", "..", "..", "..", "src", "Functions.Integration.Test.Sample", "bin", "Debug", "net6.0"));
 
         var builder = TestFunctionHostBuilder.Create(scriptPath: scriptPath);
@@ -70,6 +72,13 @@ public class TestFunctionHostBuilderTest
         {
             l.AddProvider(new TestOutputLoggerProvider(outputHelper));
         });
+
+        string settingsFilePath = Path.Combine(path, "local.settings.json");
+
+        if (File.Exists(settingsFilePath))
+        {
+            builder.WebHostBuilder.ConfigureAppConfiguration(a => a.AddJsonFile(settingsFilePath));
+        }
 
         // apply
         var server = new TestServer(builder.WebHostBuilder);
@@ -151,7 +160,7 @@ public class TestFunctionHostBuilderTest
 
         Assert.Equal(new string[]
         {
-            "Hello Tokyo!", 
+            "Hello Tokyo!",
             "Hello Seattle!",
             "Hello London!",
         }, list);
